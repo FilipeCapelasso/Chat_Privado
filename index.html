@@ -1,40 +1,126 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat Privado</title>
   <style>
-    body { font-family: sans-serif; background: #121212; color: white; display: flex; flex-direction: column; height: 100vh; margin: 0; }
-    #messages { list-style-type: none; margin: 0; padding: 20px; flex-grow: 1; overflow-y: auto; }
-    #form { background: #1e1e1e; padding: 10px; display: flex; }
-    #input { border: none; padding: 10px; flex-grow: 1; border-radius: 5px; margin-right: 10px; }
-    button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body { 
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+      background: #0b141a; 
+      color: #e9edef; 
+      display: flex; 
+      flex-direction: column; 
+      height: 100vh; 
+    }
+
+    #messages { 
+      list-style-type: none; 
+      flex-grow: 1; 
+      overflow-y: auto; 
+      padding: 20px; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 8px;
+    }
+
+    /* Estilo das Bolhas */
+    .msg-box { 
+      max-width: 75%; 
+      padding: 8px 12px; 
+      font-size: 15px; 
+      line-height: 1.4;
+      position: relative;
+    }
+
+    /* Mensagem que EU envio (Direita) */
+    .sent { 
+      align-self: flex-end; 
+      background-color: #005c4b; 
+      border-radius: 10px 10px 0 10px; 
+    }
+
+    /* Mensagem que o OUTRO envia (Esquerda) */
+    .received { 
+      align-self: flex-start; 
+      background-color: #202c33; 
+      border-radius: 10px 10px 10px 0; 
+    }
+
+    /* Formulário de Envio */
+    #form { 
+      background: #202c33; 
+      padding: 10px 15px; 
+      display: flex; 
+      align-items: center; 
+    }
+
+    #input { 
+      background: #2a3942; 
+      border: none; 
+      padding: 12px 15px; 
+      flex-grow: 1; 
+      border-radius: 8px; 
+      color: white; 
+      outline: none; 
+      font-size: 15px;
+    }
+
+    button { 
+      background: #00a884; 
+      color: #111b21; 
+      border: none; 
+      padding: 10px 20px; 
+      margin-left: 10px; 
+      border-radius: 8px; 
+      font-weight: bold; 
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover { background: #06cf9c; }
   </style>
 </head>
 <body>
+
   <ul id="messages"></ul>
-  <form id="form" action="">
-    <input id="input" autocomplete="off" placeholder="Digite sua mensagem..." /><button>Enviar</button>
+
+  <form id="form">
+    <input id="input" autocomplete="off" placeholder="Digite sua mensagem..." />
+    <button type="submit">Enviar</button>
   </form>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    var socket = io();
-    var form = document.getElementById('form');
-    var input = document.getElementById('input');
+    const socket = io();
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const messagesList = document.getElementById('messages');
 
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', (e) => {
       e.preventDefault();
-      if (input.value) {
+      if (input.value.trim()) {
         socket.emit('chat message', input.value);
         input.value = '';
       }
     });
 
-    socket.on('chat message', function(msg) {
-      var item = document.createElement('li');
-      item.textContent = msg;
-      document.getElementById('messages').appendChild(item);
-      window.scrollTo(0, document.body.scrollHeight);
+    socket.on('chat message', (data) => {
+      const item = document.createElement('li');
+      item.textContent = data.text;
+      item.classList.add('msg-box');
+
+      // Se o ID do remetente for igual ao meu ID de conexão, vai pra direita
+      if (data.senderId === socket.id) {
+        item.classList.add('sent');
+      } else {
+        item.classList.add('received');
+      }
+
+      messagesList.appendChild(item);
+      messagesList.scrollTop = messagesList.scrollHeight;
     });
   </script>
 </body>
