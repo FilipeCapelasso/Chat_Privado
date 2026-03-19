@@ -6,81 +6,17 @@
   <title>Chat Privado</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    body { 
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-      background: #0b141a; 
-      color: #e9edef; 
-      display: flex; 
-      flex-direction: column; 
-      height: 100vh; 
-    }
-
-    #messages { 
-      list-style-type: none; 
-      flex-grow: 1; 
-      overflow-y: auto; 
-      padding: 20px; 
-      display: flex; 
-      flex-direction: column; 
-      gap: 8px;
-    }
-
-    /* Estilo das Bolhas */
-    .msg-box { 
-      max-width: 75%; 
-      padding: 8px 12px; 
-      font-size: 15px; 
-      line-height: 1.4;
-      position: relative;
-    }
-
-    /* Mensagem que EU envio (Direita) */
-    .sent { 
-      align-self: flex-end; 
-      background-color: #005c4b; 
-      border-radius: 10px 10px 0 10px; 
-    }
-
-    /* Mensagem que o OUTRO envia (Esquerda) */
-    .received { 
-      align-self: flex-start; 
-      background-color: #202c33; 
-      border-radius: 10px 10px 10px 0; 
-    }
-
-    /* Formulário de Envio */
-    #form { 
-      background: #202c33; 
-      padding: 10px 15px; 
-      display: flex; 
-      align-items: center; 
-    }
-
-    #input { 
-      background: #2a3942; 
-      border: none; 
-      padding: 12px 15px; 
-      flex-grow: 1; 
-      border-radius: 8px; 
-      color: white; 
-      outline: none; 
-      font-size: 15px;
-    }
-
-    button { 
-      background: #00a884; 
-      color: #111b21; 
-      border: none; 
-      padding: 10px 20px; 
-      margin-left: 10px; 
-      border-radius: 8px; 
-      font-weight: bold; 
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    button:hover { background: #06cf9c; }
+    body { font-family: 'Segoe UI', Roboto, sans-serif; background: #0b141a; color: #e9edef; display: flex; flex-direction: column; height: 100vh; }
+    #messages { list-style-type: none; flex-grow: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+    .msg-box { max-width: 75%; padding: 8px 12px; font-size: 15px; line-height: 1.4; position: relative; word-wrap: break-word; }
+    .sent { align-self: flex-end; background-color: #005c4b; border-radius: 10px 10px 0 10px; }
+    .received { align-self: flex-start; background-color: #202c33; border-radius: 10px 10px 10px 0; }
+    .system-msg { align-self: center; background: transparent; font-size: 12px; color: #8696a0; font-style: italic; }
+    #form { background: #202c33; padding: 10px 15px; display: flex; align-items: center; }
+    #input { background: #2a3942; border: none; padding: 12px 15px; flex-grow: 1; border-radius: 8px; color: white; outline: none; font-size: 15px; }
+    button { background: #00a884; color: #111b21; border: none; padding: 10px 20px; margin-left: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    #messages::-webkit-scrollbar { width: 6px; }
+    #messages::-webkit-scrollbar-thumb { background: #374045; }
   </style>
 </head>
 <body>
@@ -88,40 +24,70 @@
   <ul id="messages"></ul>
 
   <form id="form">
-    <input id="input" autocomplete="off" placeholder="Digite sua mensagem..." />
+    <input id="input" autocomplete="off" placeholder="Digite sua mensagem ou /comando..." />
     <button type="submit">Enviar</button>
   </form>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io();
+    // Obtém o nome da sala da URL (?room=nome)
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomName = urlParams.get('room') || 'global';
+    
+    const socket = io({ query: { room: roomName } });
     const form = document.getElementById('form');
     const input = document.getElementById('input');
     const messagesList = document.getElementById('messages');
+    
+    let isTabActive = true;
+    document.addEventListener('visibilitychange', () => {
+      isTabActive = !document.hidden;
+      if (isTabActive) document.title = "Chat Privado";
+    });
+
+    function addSystemMessage(text) {
+      const item = document.createElement('li');
+      item.textContent = text;
+      item.classList.add('system-msg');
+      messagesList.appendChild(item);
+      messagesList.scrollTop = messagesList.scrollHeight;
+    }
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      if (input.value.trim()) {
-        socket.emit('chat message', input.value);
-        input.value = '';
+      const val = input.value.trim();
+      
+      if (val === '/clear') {
+        messagesList.innerHTML = '';
+        addSystemMessage("Conversa limpa localmente.");
+      } else if (val === '/ping') {
+        socket.emit('ping-test', Date.now());
+      } else if (val) {
+        socket.emit('chat message', val);
       }
+      input.value = '';
     });
 
     socket.on('chat message', (data) => {
       const item = document.createElement('li');
       item.textContent = data.text;
       item.classList.add('msg-box');
-
-      // Se o ID do remetente for igual ao meu ID de conexão, vai pra direita
-      if (data.senderId === socket.id) {
-        item.classList.add('sent');
-      } else {
-        item.classList.add('received');
-      }
-
+      item.classList.add(data.senderId === socket.id ? 'sent' : 'received');
+      
       messagesList.appendChild(item);
       messagesList.scrollTop = messagesList.scrollHeight;
+
+      if (!isTabActive) {
+        document.title = "(*) Novo Chat";
+      }
     });
+
+    socket.on('pong-test', (startTime) => {
+      const latency = Date.now() - startTime;
+      addSystemMessage(`Latência: ${latency}ms`);
+    });
+
+    addSystemMessage(`Conectado à sala: ${roomName}`);
   </script>
 </body>
 </html>
