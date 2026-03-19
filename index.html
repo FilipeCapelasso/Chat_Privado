@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat Privado</title>
+  <style>
+    body { font-family: sans-serif; background: #121212; color: white; display: flex; flex-direction: column; height: 100vh; margin: 0; }
+    #messages { list-style-type: none; margin: 0; padding: 20px; flex-grow: 1; overflow-y: auto; }
+    #form { background: #1e1e1e; padding: 10px; display: flex; }
+    #input { border: none; padding: 10px; flex-grow: 1; border-radius: 5px; margin-right: 10px; }
+    button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <ul id="messages"></ul>
+  <form id="form" action="">
+    <input id="input" autocomplete="off" placeholder="Digite sua mensagem..." /><button>Enviar</button>
+  </form>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    var socket = io();
+    var form = document.getElementById('form');
+    var input = document.getElementById('input');
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (input.value) {
+        socket.emit('chat message', input.value);
+        input.value = '';
+      }
+    });
+
+    socket.on('chat message', function(msg) {
+      var item = document.createElement('li');
+      item.textContent = msg;
+      document.getElementById('messages').appendChild(item);
+      window.scrollTo(0, document.body.scrollHeight);
+    });
+  </script>
+</body>
+</html>
