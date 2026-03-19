@@ -1,7 +1,7 @@
 {
   "name": "site-conversas",
   "version": "1.0.0",
-  "description": "Chat privado simples",
+  "description": "Chat privado com salas e comandos",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
